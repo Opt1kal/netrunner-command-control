@@ -1,0 +1,20 @@
+[project]
+name = "netrunner-cnc"
+version = "0.1.0"
+description = "A centralized, compartmentalized, and modular tool for everything."
+readme = "README.md"
+authors = [
+    { name = "Opt1kal", email = "4087942+Opt1kal@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+nr = "netrunner.main:main"
+
+[build-system]
+requires = ["uv_build>=0.12.6,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "netrunner"
