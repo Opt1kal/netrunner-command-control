@@ -7,7 +7,9 @@ authors = [
     { name = "Opt1kal", email = "4087942+Opt1kal@users.noreply.github.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "rich>=15.0.0",
+]
 
 [project.scripts]
 nr = "netrunner.main:main"
