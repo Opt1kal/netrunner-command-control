@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-nr = "netrunner.main:main"
+nrc = "netrunner.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]
