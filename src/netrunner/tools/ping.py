@@ -14,7 +14,7 @@ def build_ping_request(target: str, count: int) -> CommandRequest:
     """
     return CommandRequest(
         program="ping",
-        arguments=["-c", str(count), target],
+        arguments=["-4", "-c", str(count), target],
         description=f"Ping {target} {count} times",
     )
 
@@ -90,8 +90,9 @@ def parse_ping_result(result: CommandResult) -> PingResult:
     if latency_stats_line:
         latency_min, latency_avg, latency_max = extract_latency_stats(latency_stats_line)
 
-    count = int(result.request.arguments[1])
-    target = result.request.arguments[2]
+    count_index = result.request.arguments.index("-c") + 1
+    count = int(result.request.arguments[count_index])
+    target = result.request.arguments[-1]
 
     if not packet_stats_line:
         status = "error"
@@ -162,4 +163,3 @@ def extract_latency_stats(latency: str) -> tuple[float, float, float]:
     latency_avg = float(parts[1])
     latency_max = float(parts[2])
     return latency_min, latency_avg, latency_max
-

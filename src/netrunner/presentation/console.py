@@ -4,6 +4,7 @@ from rich.panel import Panel
 from rich.align import Align
 
 from ..core.models import CommandRequest
+from ..tools.dns import DNSResult
 
 netrunner_theme = Theme(
     {
@@ -30,12 +31,12 @@ console = Console(theme=netrunner_theme)
 
 def show_header():
     logo = """
-    [white]███╗   ██╗[/][nr.primary]███████╗████████╗[/][white]██████╗ [/][cyan] ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗[/]
-    [white]████╗  ██║[/][nr.primary]██╔════╝╚══██╔══╝[/][white]██╔══██╗[/][cyan] ██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗[/]
-    [white]██╔██╗ ██║[/][nr.primary]█████╗     ██║   [/][white]██████╔╝[/][cyan] ██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝[/]
-    [white]██║╚██╗██║[/][nr.primary]██╔══╝     ██║   [/][white]██╔══██╗[/][cyan] ██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗[/]
-    [white]██║ ╚████║[/][nr.primary]███████╗   ██║   [/][white]██║  ██║[/][cyan] ╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║[/]
-    [white]╚═╝  ╚═══╝[/][nr.primary]╚══════╝   ╚═╝   [/][white]╚═╝  ╚═╝[/][cyan]  ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝[/]"""
+    [white]███╗   ██╗[/][nr.primary]███████╗████████╗[/][white]██████╗ [/][cyan]██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗[/]
+    [white]████╗  ██║[/][nr.primary]██╔════╝╚══██╔══╝[/][white]██╔══██╗[/][cyan]██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗[/]
+    [white]██╔██╗ ██║[/][nr.primary]█████╗     ██║   [/][white]██████╔╝[/][cyan]██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝[/]
+    [white]██║╚██╗██║[/][nr.primary]██╔══╝     ██║   [/][white]██╔══██╗[/][cyan]██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗[/]
+    [white]██║ ╚████║[/][nr.primary]███████╗   ██║   [/][white]██║  ██║[/][cyan]╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║[/]
+    [white]╚═╝  ╚═══╝[/][nr.primary]╚══════╝   ╚═╝   [/][white]╚═╝  ╚═╝[/][cyan] ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝[/]"""
     tagline = "[dim white]░▒[/][dim cyan]▓[/]  [white]SIGNAL[/] [cyan]//[/] [white]ROUTE[/] [cyan]//[/] [white]EXECUTE[/]  [dim cyan]▓[/][dim white]▒░[/]"
     subtitle = "[dim white]COMMAND & CONTROL[/]"
     header = Group(
@@ -130,4 +131,36 @@ def show_ping_result(result):
             border_style="nr.primary",
         ),
     )
+def show_error(message: str):
+    console.print(
+        Panel(
+            f"[nr.error]Error:[/] {message}",
+            title="[nr.error]ERROR[/]",
+            border_style="nr.error",
+        ),
+    )
 
+def show_dns_result(result: DNSResult):
+    answers_display = (
+        "\n".join(f"    {answer}" for answer in result.answers)
+        if result.answers
+        else "    No answers received"
+    )
+    query_time_display = f"{result.query_time} ms" if result.query_time is not None else "N/A"
+    server_display = result.server if result.server is not None else "N/A"
+
+    content = (
+        f"[nr.text]DNS Result for[/] [nr.success]{result.query}[/]:\n"
+        f"  [nr.primary]Record Type:[/] {result.record_type}\n"
+        f"  [nr.primary]Answers:[/]\n{answers_display}\n"
+        f"  [nr.primary]Query Time:[/] {query_time_display}\n"
+        f"  [nr.primary]Server:[/] {server_display}\n"
+        f"  [nr.primary]Status:[/] [nr.status]{result.status}[/]"
+    )
+    console.print(
+        Panel(
+            content,
+            title="DNS RESULTS",
+            border_style="nr.primary",
+        ),
+    )
