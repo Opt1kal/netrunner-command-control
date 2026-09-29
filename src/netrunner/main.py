@@ -1,48 +1,14 @@
-from .tools.ping import build_ping_request, parse_ping_result
-from .tools.dns import build_dns_request, parse_dns_result
-from .core.runner import run_command
-from .presentation.console import show_header, show_ping_result, show_request, show_error, show_dns_result
+from .workflows import run_ping, run_dns
+from .interaction import run_main_menu
+from .presentation.console import(
+     show_error,
+     prompt_input,
+     show_header,
+     show_request,
+     show_dns_result,
+     show_ping_result,
+)
 import argparse
-
-def run_dns(query=None, record_type=None):
-    show_header()
-
-    while not query:
-        query = input("Enter a domain name or IP address to perform a DNS lookup (e.g., example.com): ").strip()
-
-        if not query:
-            print("Query cannot be empty. Please enter a valid domain name or IP address.")
-    if not record_type:
-        record_type = input("Enter the DNS record type to query (e.g., A, AAAA, MX, CNAME) [default: A]: ").strip().upper()
-        if not record_type:
-            record_type = "A"
-    else:
-        record_type = record_type.upper()
-
-    request = build_dns_request(query=query, record_type=record_type)
-    result = run_command(request)
-    dns_result = parse_dns_result(result)
-
-    show_request(request)
-    show_dns_result(dns_result)
-
-def run_ping(target=None):
-    show_header()
-
-    while not target:
-        target = input("Enter a target to ping (e.g., google.com): ").strip()
-        if not target:
-            print(
-                "Target cannot be empty. Please enter a valid target."
-            )
-
-    request = build_ping_request(target=target, count=5)
-    result = run_command(request)
-    ping_result = parse_ping_result(result)
-
-    show_request(request)
-    show_ping_result(ping_result)
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -62,10 +28,35 @@ def main():
     args = parser.parse_args()
 
     if not args.command:
-        show_header()
-        show_error("No command provided. Please specify a command to run. Use 'nrc -h' for a list of available commands."
-                   )
+        run_main_menu()
     elif args.command == "ping":
-        run_ping(target=args.target)
+        target = args.target
+
+        while not target:
+            target = prompt_input("TARGET")
+
+            if not target:
+                show_error("Target cannot be empty.")
+
+        request, ping_result = run_ping(target)
+
+        show_header()
+        show_request(request)
+        show_ping_result(ping_result)
     elif args.command == "dns":
-        run_dns(args.query, args.record_type)
+        query=args.query
+        record_type=args.record_type or "A"
+
+        while not query:
+            query = prompt_input("QUERY")
+
+            if not query:
+                show_error("Query cannot be empty.")
+
+        record_type = record_type.upper()
+
+        request, dns_result = run_dns(query, record_type)
+
+        show_header()
+        show_request(request)
+        show_dns_result(dns_result)

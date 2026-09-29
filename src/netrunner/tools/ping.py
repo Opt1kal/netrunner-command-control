@@ -101,7 +101,7 @@ def parse_ping_result(result: CommandResult) -> PingResult:
     elif packets_received > 0 and packets_received < packets_sent:
         status = "unstable"
     else:
-        status = "unreachable"
+        status = "no_response"
 
     return PingResult(
         target=target,

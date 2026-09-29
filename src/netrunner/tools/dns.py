@@ -70,7 +70,7 @@ def parse_dns_result(result: CommandResult) -> DNSResult:
         elif line.startswith(";; Query time:"):
             query_time = int(line.split(":")[1].strip().split()[0])
         elif line.startswith(";; SERVER:"):
-            server = line.split(":")[1].strip()
+            server = line.split(":", 1)[1].strip()
         elif line.startswith(";; ->>HEADER<<-"):
             dns_status = line.split("status: ")[1].split(",")[0].strip()
         elif in_answer_section:
