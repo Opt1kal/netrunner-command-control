@@ -16,7 +16,7 @@ class RouteHop:
 @dataclass
 class RouteTraceResult:
     target: str
-    destination_ip: str
+    destination_ip: str | None
     hops: list[RouteHop]
     responding_hops: int
     destination_reached: bool
@@ -31,6 +31,15 @@ class RouteProbe:
 def parse_route_result(result: CommandResult) -> RouteTraceResult:
     lines = result.stdout.splitlines()
     hops: list[RouteHop] = []
+    if not lines:
+        return RouteTraceResult(
+            target=result.request.arguments[1],
+            destination_ip=None,
+            hops=hops,
+            responding_hops=0,
+            destination_reached=False,
+            status="failed",
+        )
     header = lines[0]
     start = header.find("(")
     end = header.find(")")

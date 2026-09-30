@@ -1,4 +1,5 @@
 from .workflows import run_ping, run_dns, run_route
+from .sequences.target_recon import run_target_recon
 from .presentation.console import (
     show_dns_result,
     prompt_input,
@@ -13,6 +14,7 @@ from .presentation.console import (
     show_networking_menu,
     show_route_result,
     show_route_mode_menu,
+    show_recon_result,
 )
 
 
@@ -35,17 +37,28 @@ def run_networking_menu():
         clear_screen()
         show_header()
         show_networking_menu()
+
         selection = prompt("TOOL")
+
         if selection == "1":
             clear_screen()
             show_header()
 
             target = ""
+            go_back = False
+
             while not target:
                 target = prompt_input("TARGET")
 
+                if target == "0":
+                    go_back = True
+                    break
+
                 if not target:
-                    show_error("Target cannot be empty.")
+                    show_error("Target cannot be empty. Type 0 to go back.")
+
+            if go_back:
+                continue
 
             clear_screen()
             show_header()
@@ -57,16 +70,26 @@ def run_networking_menu():
             show_request(request)
             show_ping_result(ping_result)
             pause()
+
         elif selection == "2":
             clear_screen()
             show_header()
 
             query = ""
+            go_back = False
+
             while not query:
                 query = prompt_input("QUERY")
 
+                if query == "0":
+                    go_back = True
+                    break
+
                 if not query:
-                    show_error("Query can not be empty.")
+                    show_error("Query can not be empty. Type 0 to go back.")
+
+            if go_back:
+                continue
 
             record_type = prompt_input("RECORD TYPE", "A")
             if not record_type:
@@ -151,6 +174,36 @@ def run_networking_menu():
                 show_route_result(route_result, verbose=verbose)
                 pause()
                 break
+
+        elif selection == "4":
+            clear_screen()
+            show_header()
+
+            target = ""
+            go_back = False
+
+            while not target:
+                target = prompt_input("TARGET")
+
+                if target == "0":
+                    go_back = True
+                    break
+
+                if not target:
+                    show_error("Target cannot be empty. Type 0 to go back.")
+
+            if go_back:
+                continue
+
+            clear_screen()
+            show_header()
+
+            recon_result = run_target_recon(target)
+
+            clear_screen()
+            show_header()
+            show_recon_result(recon_result)
+            pause()
 
         elif selection == "0":
             break

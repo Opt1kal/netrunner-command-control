@@ -8,6 +8,8 @@ from ..core.models import CommandRequest
 from ..tools.dns import DNSResult
 from ..tools.route import RouteTraceResult
 
+from ..sequences.target_recon import TargetReconResult
+
 netrunner_theme = Theme(
     {
         "nr.primary": "bold cyan",
@@ -30,6 +32,24 @@ netrunner_theme = Theme(
 )
 
 console = Console(theme=netrunner_theme)
+
+def get_status_style(status: str) -> str:
+    if status in ("not_answered", "unstable", "partial_success"):
+        return "nr.warning"
+
+    if status in ("error", "no_response", "not_found", "failed"):
+        return "nr.error"
+
+    if status in ("success",):
+        return "nr.success"
+
+    return "nr.text"
+
+def clear_screen():
+    console.clear()
+
+def get_terminal_width() -> int:
+    return console.width
 
 def show_header():
     if get_terminal_width() < 90:
@@ -157,7 +177,12 @@ def show_networking_menu():
 
     menu.add_row(
         "[03] ROUTE TRACE",
+        "[04] TARGET RECON",
+    )
+
+    menu.add_row(
         "[00] BACK",
+        "",
     )
 
     panel = Panel(
@@ -417,9 +442,81 @@ def show_route_result(result: RouteTraceResult, verbose=False):
             )
         )
 
+def show_recon_result(result: TargetReconResult):
+    address = result.dns_result.answers[0] if result.dns_result.answers else "N/A"
+    packet_loss = (
+        f"{result.ping_result.packet_loss:g}%"
+        if result.ping_result.packet_loss is not None
+        else "N/A"
+    )
+    latency = (
+        f"{result.ping_result.latency_avg:.1f} ms"
+        if result.ping_result.latency_avg is not None
+        else "N/A"
+    )
 
-def clear_screen():
-    console.clear()
+    hops = (
+        f"{result.route_result.responding_hops}/{len(result.route_result.hops)} responding"
+        if result.route_result.hops
+        else "N/A"
+    )
 
-def get_terminal_width() -> int:
-    return console.width
+    destination = (
+        "[nr.success]REACHED[/]"
+        if result.route_result.destination_reached
+        else "[nr.warning]NOT REACHED[/]"
+    )
+    dns_status = result.dns_result.status.replace("_", " ").upper()
+    ping_status = result.ping_result.status.replace("_", " ").upper()
+    route_status = result.route_result.status.replace("_", " ").upper()
+
+    table = Table.grid(padding=(0, 2))
+    table.add_column(style="nr.primary")
+    table.add_column(style="nr.text")
+    table.add_column(style="nr.text")
+
+    table.add_row(
+        "Target:",
+        result.target,
+    )
+    table.add_row(
+        "Address:",
+        address,
+    )
+    table.add_row("", "", "")
+    table.add_row(
+        "DNS:",
+        f"[{get_status_style(result.dns_result.status)}]{dns_status}[/]",
+    )
+    table.add_row(
+        "Ping:",
+        f"[{get_status_style(result.ping_result.status)}]{ping_status}[/]",
+        f"{packet_loss} loss / {latency}",
+    )
+    table.add_row(
+        "Route:",
+        f"[{get_status_style(result.route_result.status)}]{route_status}[/]",
+        hops,
+    )
+    table.add_row("", "", "")
+    table.add_row(
+        "Destination:",
+        destination,
+    )
+    table.add_row("", "", "")
+
+    footer = "[nr.debug]For comprehensive results, run each tool individually.[/]"
+
+    report = Group(
+        table,
+        footer,
+    )
+
+    console.print(
+        Panel(
+            report,
+            title="TARGET RECON",
+            border_style="nr.primary",
+            expand=False,
+            )
+        )
