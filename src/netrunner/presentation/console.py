@@ -1,14 +1,17 @@
+from importlib.metadata import version
 from rich.console import Console, Group
 from rich.theme import Theme
 from rich.panel import Panel
 from rich.align import Align
 from rich.table import Table
-
+from rich.live import Live
 from ..core.models import CommandRequest
 from ..tools.dns import DNSResult
 from ..tools.route import RouteTraceResult
 
 from ..sequences.target_recon import TargetReconResult
+
+from .animations import SignalWave
 
 netrunner_theme = Theme(
     {
@@ -32,6 +35,7 @@ netrunner_theme = Theme(
 )
 
 console = Console(theme=netrunner_theme)
+NETRUNNER_VERSION = version("netrunner-cnc")
 
 def get_status_style(status: str) -> str:
     if status in ("not_answered", "unstable", "partial_success"):
@@ -51,6 +55,58 @@ def clear_screen():
 def get_terminal_width() -> int:
     return console.width
 
+def format_execution_status(status: str) -> str:
+    styles = {
+        "waiting": "[dim white]· WAITING[/]",
+        "running": "[nr.primary]◈ RUNNING[/]",
+        "complete": "[nr.success]✓ COMPLETE[/]",
+        "failed": "[nr.error]✗ FAILED[/]",
+        "warning": "[nr.warning]! WARNING[/]",
+    }
+
+    return styles.get(
+        status,
+        f"[nr.text]{status.upper()}[/]",
+    )
+
+class ExecutionActivity:
+    def __init__(self, subject: str):
+        self.subject = subject
+        self.animation = SignalWave()
+        self.live = Live(console=console, refresh_per_second=8)
+
+    def __enter__(self):
+        self.live.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.live.__exit__(exc_type, exc_value, traceback)
+
+    def update(self, progress=None):
+        waveform = self.animation.next_frame()
+
+        content = (
+            f"[nr.primary]{waveform}[/]\n\n"
+            "[nr.status]STATUS:[/] EXECUTING"
+        )
+
+        if progress is not None:
+            content += (
+                "\n\n"
+                f"DNS LOOKUP      {format_execution_status(progress['dns'])}\n"
+                f"PING            {format_execution_status(progress['ping'])}\n"
+                f"ROUTE TRACE     {format_execution_status(progress['route'])}"
+            )
+
+        self.live.update(
+            Panel(
+                content,
+                title=f"[nr.primary]{self.subject}[/]",
+                border_style="nr.primary",
+                expand=False,
+            )
+        )
+
 def show_header():
     if get_terminal_width() < 90:
         show_compact_header()
@@ -63,7 +119,7 @@ def show_header():
 [white]██║ ╚████║[/][nr.primary]███████╗   ██║   [/][white]██║  ██║[/][cyan]╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║[/]
 [white]╚═╝  ╚═══╝[/][nr.primary]╚══════╝   ╚═╝   [/][white]╚═╝  ╚═╝[/][cyan] ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝[/]"""
     tagline = "[dim white]░▒[/][dim cyan]▓[/]  [white]SIGNAL[/] [cyan]//[/] [white]ROUTE[/] [cyan]//[/] [white]EXECUTE[/]  [dim cyan]▓[/][dim white]▒░[/]"
-    subtitle = "[dim white]COMMAND & CONTROL[/]"
+    subtitle = f"[dim white]COMMAND & CONTROL[/]"
     header = Group(
         Align.center(logo),
         Align.center(tagline),
@@ -73,7 +129,9 @@ def show_header():
         Panel(
             header,
             border_style="nr.primary",
-        ),
+            subtitle=f"[nr.debug]v{NETRUNNER_VERSION}[/]",
+            subtitle_align="right",
+        )
     )
 
 def show_compact_header():
@@ -84,7 +142,7 @@ def show_compact_header():
         "[cyan]//[/] [white]EXECUTE[/]  "
         "[dim cyan]▓▒░[/]"
     )
-    subtitle = "[dim white]COMMAND & CONTROL[/]"
+    subtitle = f"[dim white]COMMAND & CONTROL // v{NETRUNNER_VERSION}[/]"
 
     compact_header = Group(
         Align.center(title),

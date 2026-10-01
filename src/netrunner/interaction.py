@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from .workflows import run_ping, run_dns, run_route
 from .sequences.target_recon import run_target_recon
 from .presentation.console import (
@@ -15,7 +16,10 @@ from .presentation.console import (
     show_route_result,
     show_route_mode_menu,
     show_recon_result,
+    ExecutionActivity,
 )
+
+import time
 
 
 def run_main_menu():
@@ -182,6 +186,15 @@ def run_networking_menu():
             target = ""
             go_back = False
 
+            progress_state = {
+                "dns": "waiting",
+                "ping": "waiting",
+                "route": "waiting",
+            }
+
+            def update_progress(step: str, status: str):
+                progress_state[step] = status
+
             while not target:
                 target = prompt_input("TARGET")
 
@@ -198,7 +211,19 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            recon_result = run_target_recon(target)
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    run_target_recon,
+                    target,
+                    update_progress
+                )
+
+                with ExecutionActivity("TARGET RECON") as activity:
+                    while not future.done():
+                        activity.update(progress_state)
+                        time.sleep(0.125)
+
+                recon_result = future.result()
 
             clear_screen()
             show_header()
