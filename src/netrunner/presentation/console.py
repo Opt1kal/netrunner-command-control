@@ -8,6 +8,7 @@ from rich.live import Live
 from ..core.models import CommandRequest
 from ..tools.dns import DNSResult
 from ..tools.route import RouteTraceResult
+from ..tools.rustscan import RustScanResult
 
 from ..sequences.target_recon import TargetReconResult
 
@@ -235,12 +236,12 @@ def show_networking_menu():
 
     menu.add_row(
         "[03] ROUTE TRACE",
-        "[04] TARGET RECON",
+        "[04] PORT SCAN [RUSTSCAN]",
     )
 
     menu.add_row(
+        "[05] TARGET RECON",
         "[00] BACK",
-        "",
     )
 
     panel = Panel(
@@ -500,7 +501,39 @@ def show_route_result(result: RouteTraceResult, verbose=False):
             )
         )
 
+def show_rustscan_result(result: RustScanResult):
+
+    open_ports_display = (
+        ", ".join(str(port) for port in result.open_ports)
+        if result.open_ports
+        else "None discovered"
+    )
+
+    status_display = result.status.replace("_", " ").upper()
+
+    if result.status == "error":
+        status_style = "nr.error"
+    elif result.status == "no_ports_discovered":
+        status_style = "nr.warning"
+    else:
+        status_style = "nr.success"
+
+    content = (
+        f"[nr.text]RustScan Result for[/] [nr.success]{result.target}[/]:\n"
+        f"  [nr.primary]Open Ports:[/] {open_ports_display}\n"
+        f"  [nr.primary]Total Open Ports:[/] {len(result.open_ports)}\n"
+        f"  [nr.primary]Status:[/] [{status_style}]{status_display}[/]"
+    )
+    console.print(
+        Panel(
+            content,
+            title="RUSTSCAN RESULTS",
+            border_style="nr.primary",
+        ),
+    )
+
 def show_recon_result(result: TargetReconResult):
+
     address = result.dns_result.answers[0] if result.dns_result.answers else "N/A"
     packet_loss = (
         f"{result.ping_result.packet_loss:g}%"

@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from .workflows import run_ping, run_dns, run_route
+from .workflows import run_ping, run_dns, run_route, run_rustscan
 from .sequences.target_recon import run_target_recon
 from .presentation.console import (
     show_dns_result,
@@ -16,6 +16,7 @@ from .presentation.console import (
     show_route_result,
     show_route_mode_menu,
     show_recon_result,
+    show_rustscan_result,
     ExecutionActivity,
 )
 
@@ -180,6 +181,48 @@ def run_networking_menu():
                 break
 
         elif selection == "4":
+            clear_screen()
+            show_header()
+
+            target = ""
+            go_back = False
+
+            while not target:
+                target = prompt_input("TARGET")
+
+                if target == "0":
+                    go_back = True
+                    break
+
+                if not target:
+                    show_error("Target can not be empty. Type 0 to go back.")
+
+            if go_back:
+                continue
+
+            clear_screen()
+            show_header()
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    run_rustscan,
+                    target,
+                )
+
+                with ExecutionActivity("PORT SCAN [RUSTSCAN]") as activity:
+                    while not future.done():
+                        activity.update()
+                        time.sleep(0.125)
+
+            request, rustscan_result = future.result()
+
+            clear_screen()
+            show_header()
+            show_request(request)
+            show_rustscan_result(rustscan_result)
+            pause()
+
+        elif selection == "5":
             clear_screen()
             show_header()
 
