@@ -1,41 +1,17 @@
 from importlib.metadata import version
-from rich.console import Console, Group
-from rich.theme import Theme
+from rich.console import Group
 from rich.panel import Panel
 from rich.align import Align
 from rich.table import Table
-from rich.live import Live
 from ..core.models import CommandRequest
 from ..tools.dns import DNSResult
 from ..tools.route import RouteTraceResult
 from ..tools.rustscan import RustScanResult
+from .runtime import console
 
 from ..sequences.target_recon import TargetReconResult
+from ..sequences.port_scan import PortScanResult
 
-from .animations import SignalWave
-
-netrunner_theme = Theme(
-    {
-        "nr.primary": "bold cyan",
-        "nr.text": "white",
-        "nr.error": "bold red",
-        "nr.success": "bold green",
-        "nr.warning": "bold yellow",
-        "nr.info": "bold blue",
-        "nr.debug": "dim white",
-        "nr.command": "bold magenta",
-        "nr.argument": "yellow",
-        "nr.description": "italic white",
-        "nr.result": "bold green",
-        "nr.status": "bold cyan",
-        "nr.latency": "bold yellow",
-        "nr.packet_loss": "bold red",
-        "nr.packets_sent": "bold green",
-        "nr.packets_received": "bold green",
-    }
-)
-
-console = Console(theme=netrunner_theme)
 NETRUNNER_VERSION = version("netrunner-cnc")
 
 def get_status_style(status: str) -> str:
@@ -55,58 +31,6 @@ def clear_screen():
 
 def get_terminal_width() -> int:
     return console.width
-
-def format_execution_status(status: str) -> str:
-    styles = {
-        "waiting": "[dim white]· WAITING[/]",
-        "running": "[nr.primary]◈ RUNNING[/]",
-        "complete": "[nr.success]✓ COMPLETE[/]",
-        "failed": "[nr.error]✗ FAILED[/]",
-        "warning": "[nr.warning]! WARNING[/]",
-    }
-
-    return styles.get(
-        status,
-        f"[nr.text]{status.upper()}[/]",
-    )
-
-class ExecutionActivity:
-    def __init__(self, subject: str):
-        self.subject = subject
-        self.animation = SignalWave()
-        self.live = Live(console=console, refresh_per_second=8)
-
-    def __enter__(self):
-        self.live.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.live.__exit__(exc_type, exc_value, traceback)
-
-    def update(self, progress=None):
-        waveform = self.animation.next_frame()
-
-        content = (
-            f"[nr.primary]{waveform}[/]\n\n"
-            "[nr.status]STATUS:[/] EXECUTING"
-        )
-
-        if progress is not None:
-            content += (
-                "\n\n"
-                f"DNS LOOKUP      {format_execution_status(progress['dns'])}\n"
-                f"PING            {format_execution_status(progress['ping'])}\n"
-                f"ROUTE TRACE     {format_execution_status(progress['route'])}"
-            )
-
-        self.live.update(
-            Panel(
-                content,
-                title=f"[nr.primary]{self.subject}[/]",
-                border_style="nr.primary",
-                expand=False,
-            )
-        )
 
 def show_header():
     if get_terminal_width() < 90:
@@ -236,11 +160,16 @@ def show_networking_menu():
 
     menu.add_row(
         "[03] ROUTE TRACE",
-        "[04] PORT SCAN [RUSTSCAN]",
+        "[04] PORT SCAN",
     )
 
     menu.add_row(
-        "[05] TARGET RECON",
+        "",
+        "",
+    )
+
+    menu.add_row(
+        "[11] TARGET RECON",
         "[00] BACK",
     )
 
@@ -511,7 +440,7 @@ def show_rustscan_result(result: RustScanResult):
 
     status_display = result.status.replace("_", " ").upper()
 
-    if result.status == "error":
+    if result.status == "rustscan_error":
         status_style = "nr.error"
     elif result.status == "no_ports_discovered":
         status_style = "nr.warning"
@@ -528,6 +457,166 @@ def show_rustscan_result(result: RustScanResult):
         Panel(
             content,
             title="RUSTSCAN RESULTS",
+            border_style="nr.primary",
+        ),
+    )
+
+def show_nmap_result(result):
+
+    status_display = result.status.replace("_", " ").upper()
+    resolved_ip_display = result.resolved_ip if result.resolved_ip is not None else "N/A"
+    hostname_display = result.hostname if result.hostname is not None else "N/A"
+    host_state_display = result.host_state.upper() if result.host_state is not None else "UNKNOWN"
+    elapsed_display = f"{result.elapsed:.2f}s" if result.elapsed is not None else "N/A"
+    total_ports_display = f"{len(result.ports)}" if result.ports else "0"
+    scanned_ports_display = f"{result.scanned_ports}" if result.scanned_ports is not None else "No ports scanned"
+
+    if result.status in {"nmap_error", "parse_error", "no_output"}:
+        status_style = "nr.error"
+    elif result.status == "no_open_ports":
+        status_style = "nr.warning"
+    else:
+        status_style = "nr.success"
+
+
+    summary = Table.grid(padding=(0, 2))
+    summary.add_column(style="nr.primary", width=17)
+    summary.add_column(style="nr.text")
+
+    summary.add_row("Target:", f"[nr.success]{result.target}[/]")
+    summary.add_row("Resolved IP:", resolved_ip_display)
+    summary.add_row("Hostname:", hostname_display)
+    summary.add_row("Host State:", host_state_display)
+    summary.add_row("Scanned Ports:", scanned_ports_display)
+    summary.add_row("Open Ports:", total_ports_display)
+    summary.add_row("Elapsed Time:", elapsed_display)
+    summary.add_row("Status:", f"[{status_style}]{status_display}[/]")
+
+    ports_table = Table(
+        show_header=True,
+        header_style="nr.primary",
+        box=None,
+        expand=False,
+    )
+
+    ports_table.add_column("PORT")
+    ports_table.add_column("PROTOCOL")
+    ports_table.add_column("STATE")
+    ports_table.add_column("SERVICE")
+    ports_table.add_column("PRODUCT")
+    ports_table.add_column("VERSION")
+
+    for port in result.ports:
+        ports_table.add_row(
+            str(port.port),
+            port.protocol,
+            port.state,
+            port.service if port.service is not None else "N/A",
+            port.product if port.product is not None else "N/A",
+            port.version if port.version is not None else "N/A"
+        )
+
+    panel_content = Group(
+        summary,
+        "",
+        ports_table,
+    )
+
+    console.print(
+        Panel(
+            panel_content,
+            title="NMAP RESULTS",
+            border_style="nr.primary",
+        ),
+    )
+
+def show_port_scan_result(result: PortScanResult):
+
+    rustscan_status_display = result.rustscan.status.replace("_", " ").upper()
+    nmap_status_display = result.nmap.status.replace("_", " ").upper() if result.nmap else "N/A"
+    status_display = result.status.replace("_", " ").upper()
+
+    if result.status in {"rustscan_error", "nmap_error", "parse_error", "no_output"}:
+        status_style = "nr.error"
+    elif result.status in {"no_ports_discovered", "no_open_ports"}:
+        status_style = "nr.warning"
+    else:
+        status_style = "nr.success"
+
+    if result.rustscan.status == "error":
+        rustscan_status_style = "nr.error"
+    elif result.rustscan.status == "no_ports_discovered":
+        rustscan_status_style = "nr.warning"
+    else:
+        rustscan_status_style = "nr.success"
+
+    if result.nmap is None:
+        nmap_status_style = "nr.text"
+    elif result.nmap.status in {"error", "parse_error", "no_output"}:
+        nmap_status_style = "nr.error"
+    elif result.nmap.status == "no_open_ports":
+        nmap_status_style = "nr.warning"
+    else:
+        nmap_status_style = "nr.success"
+
+    summary = Table.grid(padding=(0, 2))
+    summary.add_column(style="nr.primary", width=17)
+    summary.add_column(style="nr.text")
+    summary.add_column(style="nr.text")
+
+    summary.add_row("Target:", f"[nr.success]{result.target}[/]")
+    summary.add_row(
+        "Discovery Engine:",
+        "[nr.primary]RustScan[/]",
+        f"[{rustscan_status_style}]{rustscan_status_display}[/]",
+        )
+    summary.add_row(
+        "Analysis Engine:",
+        "[nr.primary]Nmap[/]",
+        f"[{nmap_status_style}]{nmap_status_display}[/]",
+        )
+    summary.add_row("Ports Discovered:", f"[nr.success]{len(result.rustscan.open_ports)}[/]")
+    summary.add_row("Ports Analyzed:", f"[nr.success]{result.nmap.scanned_ports if result.nmap else 0}[/]")
+    summary.add_row("Status:", f"[{status_style}]{status_display}[/]")
+
+    if result.nmap is not None and result.nmap.ports:
+        ports_table = Table(
+            show_header=True,
+            header_style="nr.primary",
+            box=None,
+            expand=False,
+        )
+
+        ports_table.add_column("PORT")
+        ports_table.add_column("PROTOCOL")
+        ports_table.add_column("STATE")
+        ports_table.add_column("SERVICE")
+        ports_table.add_column("PRODUCT")
+        ports_table.add_column("VERSION")
+
+        panel_content = Group(
+            summary,
+            "",
+            ports_table,
+        )
+    else:
+        panel_content = summary
+
+    if result.nmap is not None:
+        for port in result.nmap.ports:
+            ports_table.add_row(
+                str(port.port),
+                port.protocol,
+                port.state,
+                port.service if port.service is not None else "N/A",
+                port.product if port.product is not None else "N/A",
+                port.version if port.version is not None else "N/A",
+            )
+
+    console.print(
+        Panel(
+            panel_content,
+            title="PORT SCAN RESULTS",
             border_style="nr.primary",
         ),
     )

@@ -1,6 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor
-from .workflows import run_ping, run_dns, run_route, run_rustscan
+from .workflows import run_ping, run_dns, run_route
 from .sequences.target_recon import run_target_recon
+from .sequences.port_scan import run_port_scan
+from .presentation.activity import ExecutionActivity, run_with_activity
 from .presentation.console import (
     show_dns_result,
     prompt_input,
@@ -16,11 +17,8 @@ from .presentation.console import (
     show_route_result,
     show_route_mode_menu,
     show_recon_result,
-    show_rustscan_result,
-    ExecutionActivity,
+    show_port_scan_result,
 )
-
-import time
 
 
 def run_main_menu():
@@ -68,7 +66,11 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            request, ping_result = run_ping(target)
+            request, ping_result = run_with_activity(
+                "PING",
+                run_ping,
+                target,
+            )
 
             clear_screen()
             show_header()
@@ -163,7 +165,7 @@ def run_networking_menu():
                         break
 
                     if not target:
-                        show_error("Target can not be empty.")
+                        show_error("Target can not be empty. Type 0 to go back.")
 
                 if go_back:
                     continue
@@ -171,7 +173,11 @@ def run_networking_menu():
                 clear_screen()
                 show_header()
 
-                request, route_result = run_route(target)
+                request, route_result = run_with_activity(
+                    "ROUTE TRACE",
+                    run_route,
+                    target,
+                )
 
                 clear_screen()
                 show_header()
@@ -203,26 +209,18 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(
-                    run_rustscan,
-                    target,
-                )
-
-                with ExecutionActivity("PORT SCAN [RUSTSCAN]") as activity:
-                    while not future.done():
-                        activity.update()
-                        time.sleep(0.125)
-
-            request, rustscan_result = future.result()
+            port_scan_result = run_with_activity(
+                "PORT SCAN",
+                run_port_scan,
+                target,
+            )
 
             clear_screen()
             show_header()
-            show_request(request)
-            show_rustscan_result(rustscan_result)
+            show_port_scan_result(port_scan_result)
             pause()
 
-        elif selection == "5":
+        elif selection == "11":
             clear_screen()
             show_header()
 
@@ -254,19 +252,13 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(
-                    run_target_recon,
-                    target,
-                    update_progress
-                )
-
-                with ExecutionActivity("TARGET RECON") as activity:
-                    while not future.done():
-                        activity.update(progress_state)
-                        time.sleep(0.125)
-
-                recon_result = future.result()
+            recon_result = run_with_activity(
+                "TARGET RECON",
+                run_target_recon,
+                target,
+                update_progress,
+                progress_state=progress_state,
+            )
 
             clear_screen()
             show_header()

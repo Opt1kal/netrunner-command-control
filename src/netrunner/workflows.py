@@ -2,6 +2,7 @@ from .tools.ping import build_ping_request, parse_ping_result
 from .tools.dns import build_dns_request, parse_dns_result
 from .tools.route import build_route_request, parse_route_result
 from .tools.rustscan import build_rustscan_request, parse_rustscan_result
+from .tools.nmap import build_nmap_request, parse_nmap_result
 from .core.runner import run_command
 
 def run_dns(query, record_type):
@@ -31,3 +32,13 @@ def run_rustscan(target):
     rustscan_result = parse_rustscan_result(result)
 
     return request, rustscan_result
+
+def run_nmap(target, ports=None):
+    request = build_nmap_request(
+        target=target,
+        ports=ports,
+        )
+    result = run_command(request)
+    nmap_result = parse_nmap_result(result)
+
+    return request, nmap_result
