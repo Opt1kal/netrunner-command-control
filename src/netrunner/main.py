@@ -101,7 +101,7 @@ def main():
         target = args.target
 
         while not target:
-            target = prompt_imput("TARGET")
+            target = prompt_input("TARGET")
 
             if not target:
                 show_error("Target cannot be empty.")
