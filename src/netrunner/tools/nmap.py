@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from ipaddress import ip_address
 from ..core.models import CommandRequest, CommandResult
 import xml.etree.ElementTree as ET
 
@@ -28,6 +29,12 @@ def build_nmap_request(
     ports: list[int] | None = None,
 ) -> CommandRequest:
     arguments = ["-sV", "-oX", "-"]
+
+    try:
+        if ip_address(target).version == 6:
+            arguments.append("-6")
+    except ValueError:
+        pass
 
     if ports:
         ports_str = ",".join(str(port) for port in ports)
@@ -105,6 +112,8 @@ def parse_nmap_result(result: CommandResult) -> NmapResult:
 
     for host in root.findall("host"):
         address_elem = host.find('address[@addrtype="ipv4"]')
+        if address_elem is None:
+            address_elem = host.find('address[@addrtype="ipv6"]')
         if address_elem is not None:
             resolved_ip = address_elem.get("addr")
 

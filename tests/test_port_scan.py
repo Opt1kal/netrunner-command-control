@@ -1,4 +1,5 @@
 import unittest
+import socket
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -16,7 +17,10 @@ class PortScanParserIntegrationTests(unittest.TestCase):
                 )
                 self.assertEqual(result.rustscan.open_ports, ports)
                 self.assertEqual(result.status, "success")
-                nmap.assert_called_once_with("lab.example", ports=ports)
+                self.assertEqual(result.target, "lab.example")
+                self.assertEqual(result.rustscan.target, "lab.example")
+                self.assertEqual(result.nmap.target, "lab.example")
+                nmap.assert_called_once_with("192.0.2.1", ports=ports)
 
     def test_empty_or_malformed_discovery_skips_nmap(self):
         for output, status in (
@@ -32,13 +36,17 @@ class PortScanParserIntegrationTests(unittest.TestCase):
 
     def run_with_output(self, stdout):
         command_result = CommandResult(
-            request=build_rustscan_request("lab.example"),
+            request=build_rustscan_request("192.0.2.1"),
             stdout=stdout,
             stderr="",
             exit_code=0,
         )
         with (
             patch("subprocess.run", side_effect=AssertionError("Unexpected external command")),
+            patch(
+                "socket.getaddrinfo",
+                return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.0.2.1", 0))],
+            ),
             patch("netrunner.workflows.run_command", return_value=command_result),
             patch(
                 "netrunner.sequences.port_scan.run_nmap",

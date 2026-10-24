@@ -30,6 +30,7 @@ def run_rustscan(target):
     request = build_rustscan_request(target=target)
     result = run_command(request)
     rustscan_result = parse_rustscan_result(result)
+    rustscan_result.target = target
 
     return request, rustscan_result
 

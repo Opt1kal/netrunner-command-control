@@ -1,6 +1,7 @@
 from .workflows import run_ping, run_dns, run_route
 from .sequences.target_recon import run_target_recon
 from .sequences.port_scan import run_port_scan
+from .tools.rustscan import InvalidPortScanTarget
 from .presentation.activity import ExecutionActivity, run_with_activity
 from .presentation.console import (
     show_dns_result,
@@ -209,11 +210,16 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            port_scan_result = run_with_activity(
-                "PORT SCAN",
-                run_port_scan,
-                target,
-            )
+            try:
+                port_scan_result = run_with_activity(
+                    "PORT SCAN",
+                    run_port_scan,
+                    target,
+                )
+            except InvalidPortScanTarget as exc:
+                show_error(str(exc))
+                pause()
+                continue
 
             clear_screen()
             show_header()

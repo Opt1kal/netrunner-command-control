@@ -1,6 +1,7 @@
 from .workflows import run_ping, run_dns, run_route
 from .interaction import run_main_menu
 from .sequences.port_scan import run_port_scan
+from .tools.rustscan import InvalidPortScanTarget
 from .sequences.target_recon import run_target_recon
 from .presentation.activity import run_with_activity
 from .presentation.console import(
@@ -153,11 +154,14 @@ def main():
             if not target:
                 show_error("Target cannot be empty.")
 
-        PortScanResult = run_with_activity(
-            "PORT SCAN",
-            run_port_scan,
-            target,
-        )
+        try:
+            PortScanResult = run_with_activity(
+                "PORT SCAN",
+                run_port_scan,
+                target,
+            )
+        except InvalidPortScanTarget as exc:
+            portscan_parser.error(str(exc))
 
         show_header()
         show_port_scan_result(PortScanResult)

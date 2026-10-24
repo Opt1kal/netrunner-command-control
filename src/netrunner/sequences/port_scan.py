@@ -21,13 +21,15 @@ def run_port_scan(
             progress(step, status)
 
     report("rustscan", "running")
-    _, rustscan_result = run_rustscan(target)
+    request, rustscan_result = run_rustscan(target)
     report("rustscan", "complete")
 
     nmap_result = None
     if rustscan_result.status == "success" and rustscan_result.open_ports:
         report("nmap", "running")
-        _, nmap_result = run_nmap(target, ports=rustscan_result.open_ports)
+        # Use the same pinned address; never resolve the hostname again in Nmap.
+        _, nmap_result = run_nmap(request.arguments[1], ports=rustscan_result.open_ports)
+        nmap_result.target = target
         report("nmap", "complete")
 
     if rustscan_result.status == "error":
