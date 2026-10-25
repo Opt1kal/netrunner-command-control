@@ -31,7 +31,7 @@ class RouteProbe:
 def parse_route_result(result: CommandResult) -> RouteTraceResult:
     lines = result.stdout.splitlines()
     hops: list[RouteHop] = []
-    if not lines:
+    if result.exit_code != 0 or not lines:
         return RouteTraceResult(
             target=result.request.arguments[1],
             destination_ip=None,

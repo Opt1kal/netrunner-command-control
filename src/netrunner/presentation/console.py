@@ -3,6 +3,8 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.align import Align
 from rich.table import Table
+from rich.markup import escape
+from rich.text import Text
 from ..core.models import CommandRequest
 from ..tools.dns import DNSResult
 from ..tools.route import RouteTraceResult
@@ -84,13 +86,13 @@ def show_compact_header():
 def show_request(request: CommandRequest):
     arguments = ", ".join(request.arguments)
     content = (
-        f"[nr.primary]Command:[/] [nr.command]{request.program}[/]\n"
-        f"[nr.primary]Arguments:[/] [nr.argument]{arguments}[/]\n"
-        f"[nr.primary]Description:[/] [nr.description]{request.description}[/]"
+        f"[nr.primary]Command:[/] [nr.command]{escape(request.program)}[/]\n"
+        f"[nr.primary]Arguments:[/] [nr.argument]{escape(arguments)}[/]\n"
+        f"[nr.primary]Description:[/] [nr.description]{escape(request.description)}[/]"
     )
     console.print(
         Panel(
-            content,
+            Text.from_markup(content, emoji=False),
             title="COMMAND",
             border_style="nr.primary",
         ),
@@ -103,11 +105,6 @@ def show_main_menu():
         menu.add_column()
 
         menu.add_row("[01] NETWORKING TOOLS")
-        menu.add_row("[02] HEALTH CHECK")
-        menu.add_row("[03] OSINT TOOLS")
-        menu.add_row("[04] PENTESTING TOOLS")
-        menu.add_row("[05] DEFENSE TOOLS")
-        menu.add_row("[06] SYSTEM TOOLS")
         menu.add_row("[00] EXIT")
         panel = Panel(
             menu,
@@ -123,22 +120,7 @@ def show_main_menu():
 
     menu.add_row(
         "[01] NETWORKING TOOLS",
-        "[02] HEALTH CHECK",
-    )
-
-    menu.add_row(
-        "[03] OSINT TOOLS",
-        "[04] PENTESTING TOOLS",
-    )
-
-    menu.add_row(
-        "[05] DEFENSE TOOLS",
-        "[06] SYSTEM TOOLS",
-    )
-
-    menu.add_row(
         "[00] EXIT",
-        "",
     )
 
     panel = Panel(
@@ -217,21 +199,21 @@ def show_route_mode_menu(selected=None):
 def show_error(message: str):
     console.print(
         Panel(
-            f"[nr.error]Error:[/] {message}",
+            Text.from_markup(f"[nr.error]Error:[/] {escape(message)}", emoji=False),
             title="[nr.error]ERROR[/]",
             border_style="nr.error",
         ),
     )
 
 def prompt(subject: str) -> str:
-    console.print(f"[nr.primary]SELECT {subject} > [/]", end="")
+    console.print(Text(f"SELECT {subject} > ", style="nr.primary"), end="")
     return input()
 
 def prompt_input(subject: str, default=None) -> str:
     if default:
-        console.print(f"[nr.primary]{subject} [{default}] > [/]", end="")
+        console.print(Text(f"{subject} [{default}] > ", style="nr.primary"), end="")
     else:
-        console.print(f"[nr.primary]{subject} > [/]", end="")
+        console.print(Text(f"{subject} > ", style="nr.primary"), end="")
     return input().strip()
 
 def pause():
@@ -293,8 +275,8 @@ def show_ping_result(result):
         latency_style = "nr.error"
 
     content = (
-        f"[nr.text]Ping Result for[/] [nr.success]{result.target}[/]:\n"
-        f"  [nr.primary]Resolved IP:[/] {resolved_ip_display}\n"
+        f"[nr.text]Ping Result for[/] [nr.success]{escape(result.target)}[/]:\n"
+        f"  [nr.primary]Resolved IP:[/] {escape(resolved_ip_display)}\n"
         f"  [nr.primary]Packets Sent:[/] [{packets_sent_style}]{result.packets_sent}[/]\n"
         f"  [nr.primary]Packets Received:[/] [{packets_received_style}]{result.packets_received}[/]\n"
         f"  [nr.primary]Packet Loss:[/] [{packet_loss_style}]{packet_loss_display}[/]\n"
@@ -303,7 +285,7 @@ def show_ping_result(result):
     )
     console.print(
         Panel(
-            content,
+            Text.from_markup(content, emoji=False),
             title="PING RESULTS",
             border_style="nr.primary",
         ),
@@ -311,7 +293,7 @@ def show_ping_result(result):
 
 def show_dns_result(result: DNSResult):
     answers_display = (
-        "\n".join(f"    {answer}" for answer in result.answers)
+        "\n".join(f"    {escape(answer)}" for answer in result.answers)
         if result.answers
         else "    No answers received"
     )
@@ -319,16 +301,16 @@ def show_dns_result(result: DNSResult):
     server_display = result.server if result.server is not None else "N/A"
 
     content = (
-        f"[nr.text]DNS Result for[/] [nr.success]{result.query}[/]:\n"
-        f" [nr.primary]Record Type:[/] {result.record_type}\n"
+        f"[nr.text]DNS Result for[/] [nr.success]{escape(result.query)}[/]:\n"
+        f" [nr.primary]Record Type:[/] {escape(result.record_type)}\n"
         f" [nr.primary]Answers:[/]\n{answers_display}\n"
         f" [nr.primary]Query Time:[/] {query_time_display}\n"
-        f" [nr.primary]Server:[/] {server_display}\n"
+        f" [nr.primary]Server:[/] {escape(server_display)}\n"
         f" [nr.primary]Status:[/] [nr.status]{result.status}[/]"
     )
     console.print(
         Panel(
-            content,
+            Text.from_markup(content, emoji=False),
             title="DNS RESULTS",
             border_style="nr.primary",
         ),
@@ -348,8 +330,8 @@ def show_route_result(result: RouteTraceResult, verbose=False):
         status_style = "nr.error"
 
     content = (
-        f"[nr.text]Route Trace Result for[/] [nr.success]{result.target}[/]:\n"
-        f"  [nr.primary]Destination IP:[/] [nr.success]{result.destination_ip}[/]\n"
+        f"[nr.text]Route Trace Result for[/] [nr.success]{escape(result.target)}[/]:\n"
+        f"  [nr.primary]Destination IP:[/] [nr.success]{escape(str(result.destination_ip))}[/]\n"
         f"  [nr.primary]Total Hops:[/] {len(result.hops)}\n"
         f"  [nr.primary]Responding Hops:[/] {result.responding_hops}\n"
         f"  [nr.primary]Destination:[/] [{destination_reached_style}]{destination_reached_display}[/]\n"
@@ -358,7 +340,7 @@ def show_route_result(result: RouteTraceResult, verbose=False):
 
     console.print(
         Panel(
-            content,
+            Text.from_markup(content, emoji=False),
             title="ROUTE TRACE RESULTS",
             border_style="nr.primary"
         )
@@ -395,7 +377,7 @@ def show_route_result(result: RouteTraceResult, verbose=False):
                 router_display = f"{hostname} ({ip})" if hostname != ip else ip
 
                 route_lines.append(
-                    f"[nr.primary]{hop_number_display}[/] [nr.text]{router_display}[/]"
+                    f"[nr.primary]{hop_number_display}[/] [nr.text]{escape(str(router_display))}[/]"
                 )
                 route_lines.append(
                     f"    [nr.status]{probe_summary}[/]"
@@ -414,7 +396,7 @@ def show_route_result(result: RouteTraceResult, verbose=False):
                         router_display = f"{probe.hostname} ({probe.ip})" if probe.hostname != probe.ip else probe.ip
                         latency_display = f"{probe.response_time:.3f} ms"
                         probe_line = (
-                            f"[nr.text]{router_display}[/] "
+                            f"[nr.text]{escape(str(router_display))}[/] "
                             f"[nr.status]{latency_display}[/]"
                         )
 
@@ -424,7 +406,7 @@ def show_route_result(result: RouteTraceResult, verbose=False):
 
         console.print(
             Panel(
-                route_content,
+                Text.from_markup(route_content, emoji=False),
                 title="ROUTE",
                 border_style="nr.primary"
             )
@@ -440,7 +422,7 @@ def show_rustscan_result(result: RustScanResult):
 
     status_display = result.status.replace("_", " ").upper()
 
-    if result.status == "rustscan_error":
+    if result.status in {"error", "rustscan_error"}:
         status_style = "nr.error"
     elif result.status == "no_ports_discovered":
         status_style = "nr.warning"
@@ -448,14 +430,14 @@ def show_rustscan_result(result: RustScanResult):
         status_style = "nr.success"
 
     content = (
-        f"[nr.text]RustScan Result for[/] [nr.success]{result.target}[/]:\n"
+        f"[nr.text]RustScan Result for[/] [nr.success]{escape(result.target)}[/]:\n"
         f"  [nr.primary]Open Ports:[/] {open_ports_display}\n"
         f"  [nr.primary]Total Open Ports:[/] {len(result.open_ports)}\n"
         f"  [nr.primary]Status:[/] [{status_style}]{status_display}[/]"
     )
     console.print(
         Panel(
-            content,
+            Text.from_markup(content, emoji=False),
             title="RUSTSCAN RESULTS",
             border_style="nr.primary",
         ),
@@ -471,7 +453,7 @@ def show_nmap_result(result):
     total_ports_display = f"{len(result.ports)}" if result.ports else "0"
     scanned_ports_display = f"{result.scanned_ports}" if result.scanned_ports is not None else "No ports scanned"
 
-    if result.status in {"nmap_error", "parse_error", "no_output"}:
+    if result.status in {"error", "nmap_error", "parse_error", "no_output"}:
         status_style = "nr.error"
     elif result.status == "no_open_ports":
         status_style = "nr.warning"
@@ -483,10 +465,10 @@ def show_nmap_result(result):
     summary.add_column(style="nr.primary", width=17)
     summary.add_column(style="nr.text")
 
-    summary.add_row("Target:", f"[nr.success]{result.target}[/]")
-    summary.add_row("Resolved IP:", resolved_ip_display)
-    summary.add_row("Hostname:", hostname_display)
-    summary.add_row("Host State:", host_state_display)
+    summary.add_row("Target:", Text(result.target, style="nr.success"))
+    summary.add_row("Resolved IP:", Text(resolved_ip_display))
+    summary.add_row("Hostname:", Text(hostname_display))
+    summary.add_row("Host State:", Text(host_state_display))
     summary.add_row("Scanned Ports:", scanned_ports_display)
     summary.add_row("Open Ports:", total_ports_display)
     summary.add_row("Elapsed Time:", elapsed_display)
@@ -509,11 +491,11 @@ def show_nmap_result(result):
     for port in result.ports:
         ports_table.add_row(
             str(port.port),
-            port.protocol,
-            port.state,
-            port.service if port.service is not None else "N/A",
-            port.product if port.product is not None else "N/A",
-            port.version if port.version is not None else "N/A"
+            Text(port.protocol),
+            Text(port.state),
+            Text(port.service if port.service is not None else "N/A"),
+            Text(port.product if port.product is not None else "N/A"),
+            Text(port.version if port.version is not None else "N/A")
         )
 
     panel_content = Group(
@@ -564,7 +546,7 @@ def show_port_scan_result(result: PortScanResult):
     summary.add_column(style="nr.text")
     summary.add_column(style="nr.text")
 
-    summary.add_row("Target:", f"[nr.success]{result.target}[/]")
+    summary.add_row("Target:", Text(result.target, style="nr.success"))
     summary.add_row(
         "Discovery Engine:",
         "[nr.primary]RustScan[/]",
@@ -606,11 +588,11 @@ def show_port_scan_result(result: PortScanResult):
         for port in result.nmap.ports:
             ports_table.add_row(
                 str(port.port),
-                port.protocol,
-                port.state,
-                port.service if port.service is not None else "N/A",
-                port.product if port.product is not None else "N/A",
-                port.version if port.version is not None else "N/A",
+                Text(port.protocol),
+                Text(port.state),
+                Text(port.service if port.service is not None else "N/A"),
+                Text(port.product if port.product is not None else "N/A"),
+                Text(port.version if port.version is not None else "N/A"),
             )
 
     console.print(
@@ -657,11 +639,11 @@ def show_recon_result(result: TargetReconResult):
 
     table.add_row(
         "Target:",
-        result.target,
+        Text(result.target),
     )
     table.add_row(
         "Address:",
-        address,
+        Text(address),
     )
     table.add_row("", "", "")
     table.add_row(

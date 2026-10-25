@@ -57,6 +57,26 @@ def parse_ping_result(result: CommandResult) -> PingResult:
         PingResult: A PingResult object containing parsed information from the ping command output.
     """
 
+    count_index = result.request.arguments.index("-c") + 1
+    count = int(result.request.arguments[count_index])
+    target = result.request.arguments[-1]
+
+    # ping uses exit 1 for unanswered probes; preserve that normal result.
+    # Execution failures and timeouts must not look successful from partial output.
+    if result.exit_code not in (0, 1):
+        return PingResult(
+            target=target,
+            resolved_ip=None,
+            packets_sent=0,
+            packets_received=0,
+            packet_loss=None,
+            latency_min=None,
+            latency_avg=None,
+            latency_max=None,
+            status="error",
+            count=count,
+        )
+
     lines = result.stdout.splitlines()
 
     header_line = None
@@ -89,10 +109,6 @@ def parse_ping_result(result: CommandResult) -> PingResult:
 
     if latency_stats_line:
         latency_min, latency_avg, latency_max = extract_latency_stats(latency_stats_line)
-
-    count_index = result.request.arguments.index("-c") + 1
-    count = int(result.request.arguments[count_index])
-    target = result.request.arguments[-1]
 
     if not packet_stats_line:
         status = "error"

@@ -2,6 +2,7 @@ from .workflows import run_ping, run_dns, run_route
 from .interaction import run_main_menu
 from .sequences.port_scan import run_port_scan
 from .tools.rustscan import InvalidPortScanTarget
+from .tools.dns import InvalidDNSQuery
 from .sequences.target_recon import run_target_recon
 from .presentation.activity import run_with_activity
 from .presentation.console import(
@@ -92,7 +93,10 @@ def main():
 
         record_type = record_type.upper()
 
-        request, dns_result = run_dns(query, record_type)
+        try:
+            request, dns_result = run_dns(query, record_type)
+        except InvalidDNSQuery as exc:
+            dns_parser.error(str(exc))
 
         show_header()
         show_request(request)
@@ -116,13 +120,16 @@ def main():
         def update_progress(step: str, status: str):
             progress_state[step] = status
 
-        recon_result = run_with_activity(
-            "TARGET RECON",
-            run_target_recon,
-            target,
-            update_progress,
-            progress_state=progress_state,
-        )
+        try:
+            recon_result = run_with_activity(
+                "TARGET RECON",
+                run_target_recon,
+                target,
+                update_progress,
+                progress_state=progress_state,
+            )
+        except InvalidDNSQuery as exc:
+            recon_parser.error(str(exc))
 
         show_header()
         show_recon_result(recon_result)

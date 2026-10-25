@@ -1,7 +1,7 @@
 [project]
 name = "netrunner-cnc"
 version = "0.1.0"
-description = "A centralized, compartmentalized, and modular tool for everything."
+description = "A Python/Linux terminal application for networking diagnostics and modular tool workflows."
 readme = "README.md"
 authors = [
     { name = "Opt1kal", email = "4087942+Opt1kal@users.noreply.github.com" }

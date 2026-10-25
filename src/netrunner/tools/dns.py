@@ -1,5 +1,67 @@
 from dataclasses import dataclass
+from ipaddress import ip_address
+import re
 from ..core.models import CommandRequest, CommandResult
+
+
+class InvalidDNSQuery(ValueError):
+    """DNS input is not a supported query name or record type."""
+
+
+def _query_name(query: str) -> str:
+    if not query or any(character.isspace() or ord(character) < 32 for character in query):
+        raise InvalidDNSQuery("Enter one DNS query name without whitespace or control characters.")
+    if query == ".":
+        return query
+
+    try:
+        # Preserve IP-literal queries; these are not automatic reverse lookups.
+        ip_address(query)
+    except ValueError:
+        pass
+    else:
+        if "%" not in query:
+            return query
+
+    try:
+        name = query.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise InvalidDNSQuery("The DNS query name could not be encoded as IDNA.") from exc
+
+    labels = name.removesuffix(".").split(".")
+    if (
+        name.startswith(("-", "+", "@"))
+        or len(name.removesuffix(".")) > 253
+        or any(
+            len(label) > 63 or re.fullmatch(r"[A-Za-z0-9_-]+|\*", label) is None
+            for label in labels
+        )
+    ):
+        raise InvalidDNSQuery(
+            "Enter a DNS name, root (.), or IP literal; options, directives, lists, "
+            "and escaped names are not supported."
+        )
+    return name
+
+
+def _record_type(record_type: str) -> str:
+    # Validate the argument syntax, leaving mnemonic support to the installed dig.
+    # This avoids freezing a small allowlist as DNS record types evolve.
+    if not record_type.isascii():
+        raise InvalidDNSQuery("Enter a DNS record type such as A, AAAA, MX, or TYPE65.")
+    value = record_type.upper()
+    generic = re.fullmatch(r"TYPE([0-9]+)", value)
+    incremental = re.fullmatch(r"IXFR=([0-9]+)", value)
+    if value.startswith("TYPE"):
+        valid = generic is not None and len(generic[1]) <= 5 and int(generic[1]) <= 65535
+    elif incremental:
+        valid = len(incremental[1]) <= 10 and int(incremental[1]) <= 4294967295
+    else:
+        valid = re.fullmatch(r"[A-Z][A-Z0-9-]*", value) is not None
+    if not valid:
+        raise InvalidDNSQuery("Enter one DNS record type, not an option, directive, or query name.")
+    return value
+
 
 def build_dns_request(query: str, record_type: str) -> CommandRequest:
     """
@@ -12,9 +74,11 @@ def build_dns_request(query: str, record_type: str) -> CommandRequest:
     Returns:
         CommandRequest: A CommandRequest object for the dig command.
     """
+    query = _query_name(query)
+    record_type = _record_type(record_type)
     return CommandRequest(
         program="dig",
-        arguments=[query, record_type],
+        arguments=["-q", query, "-t", record_type],
         description=f"Perform a DNS lookup for {query} with record type {record_type}.",
     )
 
@@ -49,8 +113,10 @@ def parse_dns_result(result: CommandResult) -> DNSResult:
         DNSResult: A DNSResult object containing parsed information from the DNS lookup command output.
     """
     lines = result.stdout.splitlines()
-    query = result.request.arguments[0]
-    record_type = result.request.arguments[1]
+    query = result.request.arguments[1]
+    record_type = result.request.arguments[3]
+    if result.exit_code != 0:
+        return DNSResult(query, record_type, [], None, None, "error")
     answers = []
     query_time = None
     server = None

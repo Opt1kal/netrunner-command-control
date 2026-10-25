@@ -2,6 +2,7 @@ from .workflows import run_ping, run_dns, run_route
 from .sequences.target_recon import run_target_recon
 from .sequences.port_scan import run_port_scan
 from .tools.rustscan import InvalidPortScanTarget
+from .tools.dns import InvalidDNSQuery
 from .presentation.activity import ExecutionActivity, run_with_activity
 from .presentation.console import (
     show_dns_result,
@@ -34,7 +35,7 @@ def run_main_menu():
         elif selection == "0":
             break
         else:
-            show_error("Invalid selection you dingus!")
+            show_error("Invalid selection. Choose an available menu option.")
 
 def run_networking_menu():
     while True:
@@ -108,7 +109,12 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            request, dns_result = run_dns(query, record_type)
+            try:
+                request, dns_result = run_dns(query, record_type)
+            except InvalidDNSQuery as exc:
+                show_error(str(exc))
+                pause()
+                continue
 
             clear_screen()
             show_header()
@@ -258,13 +264,18 @@ def run_networking_menu():
             clear_screen()
             show_header()
 
-            recon_result = run_with_activity(
-                "TARGET RECON",
-                run_target_recon,
-                target,
-                update_progress,
-                progress_state=progress_state,
-            )
+            try:
+                recon_result = run_with_activity(
+                    "TARGET RECON",
+                    run_target_recon,
+                    target,
+                    update_progress,
+                    progress_state=progress_state,
+                )
+            except InvalidDNSQuery as exc:
+                show_error(str(exc))
+                pause()
+                continue
 
             clear_screen()
             show_header()
@@ -274,4 +285,4 @@ def run_networking_menu():
         elif selection == "0":
             break
         else:
-            show_error("Invalid selection you dingus!")
+            show_error("Invalid selection. Choose an available menu option.")

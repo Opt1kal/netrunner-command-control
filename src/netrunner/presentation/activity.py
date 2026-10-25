@@ -1,5 +1,7 @@
 from rich.live import Live
 from rich.panel import Panel
+from rich.markup import escape
+from rich.text import Text
 from concurrent.futures import ThreadPoolExecutor
 import time
 
@@ -17,7 +19,7 @@ def format_execution_status(status: str) -> str:
 
     return styles.get(
         status,
-        f"[nr.text]{status.upper()}[/]",
+        f"[nr.text]{escape(status.upper())}[/]",
     )
 
 class ExecutionActivity:
@@ -55,8 +57,8 @@ class ExecutionActivity:
 
         self.live.update(
             Panel(
-                content,
-                title=f"[nr.primary]{self.subject}[/]",
+                Text.from_markup(content, emoji=False),
+                title=Text(self.subject, style="nr.primary"),
                 border_style="nr.primary",
                 expand=False,
             )
