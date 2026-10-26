@@ -141,6 +141,12 @@ live DNS queries, scans, or installed networking executables.
 - Parsers depend on external tools' output formats. Offline regressions do not
   establish live interoperability across every tool version or environment.
 
-## Licensing
+## Licensing and Usage
 
-No software license is currently included. Licensing remains an owner decision.
+NETRUNNER Command & Control is publicly available for portfolio review and educational inspection.
+
+**Copyright © 2026 Opt1kal. All rights reserved.**
+
+No open-source license is granted. Except as permitted by applicable law and GitHub's Terms of Service, permission is not granted to copy, modify, redistribute, or commercially use this project's source code without prior authorization.
+
+This repository is maintained as a personal development portfolio and is not offered as a reusable software package.
